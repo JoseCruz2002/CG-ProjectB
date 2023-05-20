@@ -17,6 +17,16 @@ var moveTrailerBack = false;
 var moveTrailerLeft = false;
 var moveTrailerRight = false;
 
+// These constaants are used for indexing the materials of each part of the objects.
+const CONTAINER_INDEX = 0;
+const COUPLE_INDEX = 1;
+const WHEEL_INDEX = 2;
+const WHEEL_JOINT_INDEX = 3;
+
+const TORSO_INDEX = 4;
+const ABDOMEN_INDEX = 5;
+const WAIST_INDEX = 6;
+
 /* Constants to use */
 const SIZE_SCALING = 30;
 
@@ -40,6 +50,20 @@ const Z_TRANSLATION = 0.6 * SIZE_SCALING;
 const TRAILER_VELOCITY_Z = 40;
 const TRAILER_VELOCITY_X = 40;
 
+
+// Scaling sizes for the robot components (the wheels are in the trailer components)
+const X_TORSO = 1.1 * SIZE_SCALING;
+const Y_TORSO = 0.7 * SIZE_SCALING;
+const Z_TORSO = 0.7 * SIZE_SCALING;
+
+const X_ABDOMEN = 0.7 * SIZE_SCALING;
+const Y_ABDOMEN = 0.2 * SIZE_SCALING;
+const Z_ABDOMEN = 0.2 * SIZE_SCALING;
+
+const X_WAIST = 0.7 * SIZE_SCALING;
+const Y_WAIST = 0.3 * SIZE_SCALING;
+const Z_WAIST = 0.7 * SIZE_SCALING;
+
 //---------------------------------------------------------------------------------
 
 
@@ -58,7 +82,7 @@ function createWheelJoint(obj, x, y, z) {
     'use strict';
 
     geometry = new THREE.CubeGeometry(X_WHEEL_JOINT, Y_WHEEL_JOINT, Z_WHEEL_JOINT);
-    mesh = new THREE.Mesh(geometry, materials[0]);
+    mesh = new THREE.Mesh(geometry, materials[WHEEL_JOINT_INDEX]);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -74,8 +98,8 @@ function createWheelJoint(obj, x, y, z) {
 function createWheel(obj, x, y, z) {
     'use strict';
 
-    geometry = new THREE.CylinderGeometry(R_WHEEL, R_WHEEL, H_WHEEL, 64);
-    mesh = new THREE.Mesh(geometry, materials[0]);
+    geometry = new THREE.CylinderGeometry(R_WHEEL, R_WHEEL, H_WHEEL, 34);
+    mesh = new THREE.Mesh(geometry, materials[WHEEL_INDEX]);
     mesh.rotation.z = Math.PI/2;
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -89,11 +113,11 @@ function createWheel(obj, x, y, z) {
  * @param {*} y 
  * @param {*} z 
  */
-function createCouplingThing(obj, x, y, z) {
+function createCouplingDevice(obj, x, y, z) {
     'use strict';
 
     geometry = new THREE.CubeGeometry(X_COUPLE, Y_COUPLE, Z_COUPLE);
-    mesh = new THREE.Mesh(geometry, materials[0]);
+    mesh = new THREE.Mesh(geometry, materials[COUPLE_INDEX]);
     mesh.position.set(x, y ,z);
     obj.add(mesh);
 }
@@ -110,7 +134,7 @@ function createContainer(obj, x, y, z) {
     'use strict';
 
     geometry = new THREE.CubeGeometry(X_CONTAINER, Y_CONTAINER, Z_CONTAINER);
-    mesh = new THREE.Mesh(geometry, materials[0]);
+    mesh = new THREE.Mesh(geometry, materials[CONTAINER_INDEX]);
     mesh.position.set(x, y ,z);
     obj.add(mesh);
 }
@@ -121,7 +145,10 @@ function createTrailer(x, y, z) {
 
     trailer = new THREE.Object3D();
 
-    materials[0] = new THREE.MeshBasicMaterial({color: 0x807979, wireframe: true});
+    materials[CONTAINER_INDEX] = new THREE.MeshBasicMaterial({color: 0x807979, wireframe: true});
+    materials[COUPLE_INDEX] = new THREE.MeshBasicMaterial({color: 0x807900, wireframe: true});
+    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({color: 0x800079, wireframe: true});
+    materials[WHEEL_JOINT_INDEX] = new THREE.MeshBasicMaterial({color: 0x007979, wireframe: true});
 
     createContainer(trailer, 0, 0, 0);
     createWheelJoint(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT)/2, -(Z_CONTAINER-Z_WHEEL_JOINT)/2);
@@ -130,11 +157,107 @@ function createTrailer(x, y, z) {
     createWheel(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
     createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT+R_WHEEL*3-Z_CONTAINER)/2);
     createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
-    createCouplingThing(trailer, 0, -(Y_CONTAINER+Y_COUPLE)/2, Z_TRANSLATION);
+    createCouplingDevice(trailer, 0, -(Y_CONTAINER+Y_COUPLE)/2, Z_TRANSLATION);
 
     scene.add(trailer);
 
     trailer.position.set(x, y, z);
+}
+
+/**
+ * Creates the Torso of the robot (base)
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createTorso(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_TORSO, Y_TORSO, Z_TORSO);
+    mesh = new THREE.Mesh(geometry, materials[TORSO_INDEX]);
+    mesh.position.set(x, y ,z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the Abdomen of the robot (base)
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createAbdomen(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_ABDOMEN, Y_ABDOMEN, Z_ABDOMEN);
+    mesh = new THREE.Mesh(geometry, materials[ABDOMEN_INDEX]);
+    mesh.position.set(x, y ,z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the Abdomen of the robot (base)
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createWaist(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_WAIST, Y_WAIST, Z_WAIST);
+    mesh = new THREE.Mesh(geometry, materials[WAIST_INDEX]);
+    mesh.position.set(x, y ,z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the base for the robot, the torso, abdomen, waist and waist´s wheels.
+ * 
+ * @param {*} obj parent object - robot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createBaseForRobot(obj, x, y, z) {
+    'use strict'
+
+    var baseForRobot = new THREE.Object3D();
+
+    materials[TORSO_INDEX] = new THREE.MeshBasicMaterial({color: 0x00aa00, wireframe: true});
+    materials[ABDOMEN_INDEX] = new THREE.MeshBasicMaterial({color: 0xaa0000, wireframe: true});
+    materials[WAIST_INDEX] = new THREE.MeshBasicMaterial({color: 0x0000aa, wireframe: true});
+    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({color: 0x800079, wireframe: true});
+
+    createTorso(baseForRobot, 0, 0, 0);
+    createAbdomen(baseForRobot, 0, -(Y_TORSO+Y_ABDOMEN)/2, 0);
+    createWaist(baseForRobot, 0, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, 0);
+    createWheel/*on waist*/(baseForRobot, (X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
+    createWheel/*on waist*/(baseForRobot, -(X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
+
+    obj.add(baseForRobot);
+}
+
+/**
+ * Creates the robot object.
+ * 
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createRobot(x, y, z) {
+    'use strict';
+
+    var robot = new THREE.Object3D();
+
+    createBaseForRobot(robot, 0, 0, 0);
+
+    scene.add(robot);
+    robot.position.set(x, y, z);
 }
 
 
@@ -149,8 +272,8 @@ function createScene() {
     scene.add(new THREE.AxisHelper(100));
     scene.background = new THREE.Color(0xffeeff);
 
-    //createRobot();
-    createTrailer(0, 0, 0);
+    createRobot(0, 0, 0);
+    //createTrailer(0, 0, 0);
 }
 
 //////////////////////
@@ -187,8 +310,8 @@ function createCameras() {
     //perspective camera (5)
     cameras[4] = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
     cameras[4].position.x = 100;
-    cameras[4].position.y = -10;
-    cameras[4].position.z = 0;
+    cameras[4].position.y = 100;
+    cameras[4].position.z = 100;
     cameras[4].lookAt(scene.position);
 
 }
@@ -217,10 +340,11 @@ function update(){
     'use strict';
 
     var delta = clock.getDelta();
-    
     // changes the wireframe attribute of all the materials
-    for (let i = 0; i < materials.length; i++) { 
-        materials[i].wireframe = wireFramed;
+    for (let i = 0; i < materials.length; i++) {
+        if (materials[i] != undefined) {
+            materials[i].wireframe = wireFramed;
+        }
     }
 
     // moves the trailer
