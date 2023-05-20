@@ -10,12 +10,15 @@ const materials = [];
 var clock;
 
 var trailer;
+var head;
 
 var wireFramed = true;
 var moveTrailerForward = false;
 var moveTrailerBack = false;
 var moveTrailerLeft = false;
 var moveTrailerRight = false;
+var rotateHeadIn = false;
+var rotateHeadOut = false;
 
 // These constaants are used for indexing the materials of each part of the objects.
 const CONTAINER_INDEX = 0;
@@ -26,6 +29,9 @@ const WHEEL_JOINT_INDEX = 3;
 const TORSO_INDEX = 4;
 const ABDOMEN_INDEX = 5;
 const WAIST_INDEX = 6;
+const HEAD_BASE_INDEX = 7;
+const EYES_INDEX = 8;
+const ANTENAS_INDEX = 9;
 
 /* Constants to use */
 const SIZE_SCALING = 30;
@@ -45,13 +51,14 @@ const H_WHEEL = 0.2 * SIZE_SCALING;
 const X_COUPLE = 0.2 * SIZE_SCALING;
 const Y_COUPLE = 0.2 * SIZE_SCALING;
 const Z_COUPLE = 0.2 * SIZE_SCALING;
-const Z_TRANSLATION = 0.6 * SIZE_SCALING;
+const Z_COUPLE_TRANSLATION = 0.6 * SIZE_SCALING;
 
 const TRAILER_VELOCITY_Z = 40;
 const TRAILER_VELOCITY_X = 40;
 
 
 // Scaling sizes for the robot components (the wheels are in the trailer components)
+// Base of the robot, torso, abdomen and waist (with wheels)
 const X_TORSO = 1.1 * SIZE_SCALING;
 const Y_TORSO = 0.7 * SIZE_SCALING;
 const Z_TORSO = 0.7 * SIZE_SCALING;
@@ -63,6 +70,22 @@ const Z_ABDOMEN = 0.2 * SIZE_SCALING;
 const X_WAIST = 0.7 * SIZE_SCALING;
 const Y_WAIST = 0.3 * SIZE_SCALING;
 const Z_WAIST = 0.7 * SIZE_SCALING;
+
+// head of the robot, with the head, eyes, antenas and rotation angle for the head
+const X_HEAD_BASE = 0.3 * SIZE_SCALING;
+const Y_HEAD_BASE = 0.3 * SIZE_SCALING;
+const Z_HEAD_BASE = 0.3 * SIZE_SCALING;
+
+const X_EYE = 0.1 * SIZE_SCALING;
+const Y_EYE = 0.1 * SIZE_SCALING;
+const Z_EYE = 0.1 * SIZE_SCALING;
+const X_EYE_TRANSLATION = 0.08 * SIZE_SCALING;
+const Y_EYE_TRANSLATION = 0.05 * SIZE_SCALING;
+
+const R_ANTENA = 0.1/2 * SIZE_SCALING;
+const H_ANTENA = 0.1 * SIZE_SCALING; 
+
+const HEAD_ROTATION_ANGLE = Math.PI;
 
 //---------------------------------------------------------------------------------
 
@@ -157,7 +180,7 @@ function createTrailer(x, y, z) {
     createWheel(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
     createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT+R_WHEEL*3-Z_CONTAINER)/2);
     createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
-    createCouplingDevice(trailer, 0, -(Y_CONTAINER+Y_COUPLE)/2, Z_TRANSLATION);
+    createCouplingDevice(trailer, 0, -(Y_CONTAINER+Y_COUPLE)/2, Z_COUPLE_TRANSLATION);
 
     scene.add(trailer);
 
@@ -216,6 +239,87 @@ function createWaist(obj, x, y, z) {
 }
 
 /**
+ * Creates the base for the head, the "skull??".
+ * 
+ * @param {*} obj parent object - head
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createHeadBase(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_HEAD_BASE, Y_HEAD_BASE, Z_HEAD_BASE);
+    mesh = new THREE.Mesh(geometry, materials[HEAD_BASE_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates an eye for the head.
+ * 
+ * @param {*} obj parent object - head
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createEye(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_EYE, Y_EYE, Z_EYE);
+    mesh = new THREE.Mesh(geometry, materials[EYES_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates an antena for the head.
+ * 
+ * @param {*} obj parent object - head
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createAntena(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CylinderGeometry(R_ANTENA, R_ANTENA, H_ANTENA, 30);
+    mesh = new THREE.Mesh(geometry, materials[ANTENAS_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the head of the robot, the headBase, eyes and antenas.
+ * The head can perform a rotation in orther to get into the body with 
+ * the alpha angle over the XX axis.
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createHead(obj, x, y, z) {
+    'use strict'
+
+    head = new THREE.Object3D();
+
+    materials[HEAD_BASE_INDEX] = new THREE.MeshBasicMaterial({color: 0xaaaa00, wireframe: true});
+    materials[EYES_INDEX] = new THREE.MeshBasicMaterial({color: 0xaa00aa, wireframe: true});
+    materials[ANTENAS_INDEX] = new THREE.MeshBasicMaterial({color: 0x00aaaa, wireframe: true});
+
+    createHeadBase(head, 0, 0, 0);
+    createEye(head, X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE-Z_EYE)/2+0.01*SIZE_SCALING);
+    createEye(head, -X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE-Z_EYE)/2+0.01*SIZE_SCALING);
+    createAntena(head, (X_HEAD_BASE-R_ANTENA*2)/2, (Y_HEAD_BASE+H_ANTENA)/2, 0);
+    createAntena(head, -(X_HEAD_BASE-R_ANTENA*2)/2, (Y_HEAD_BASE+H_ANTENA)/2, 0);
+
+    head.position.set(x, y+Y_HEAD_BASE/2, z);
+
+    obj.add(head);
+}
+
+/**
  * Creates the base for the robot, the torso, abdomen, waist and waist´s wheels.
  * 
  * @param {*} obj parent object - robot
@@ -238,6 +342,8 @@ function createBaseForRobot(obj, x, y, z) {
     createWaist(baseForRobot, 0, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, 0);
     createWheel/*on waist*/(baseForRobot, (X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
     createWheel/*on waist*/(baseForRobot, -(X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
+
+    createHead(baseForRobot, 0, Y_TORSO/2, 0);
 
     obj.add(baseForRobot);
 }
@@ -360,6 +466,15 @@ function update(){
     if (moveTrailerRight) {
         trailer.position.x = trailer.position.x + TRAILER_VELOCITY_X*delta;
     }
+
+    if (rotateHeadIn) {
+        head.position.set(0, Y_HEAD_BASE, 0);
+        head.rotateX(HEAD_ROTATION_ANGLE*delta);
+    }
+    if (rotateHeadOut) {
+        //head.position.set(0, Y_HEAD_BASE, 0);
+        head.rotateX(-HEAD_ROTATION_ANGLE*delta);
+    }
 }
 
 /////////////
@@ -459,6 +574,14 @@ function onKeyDown(e) {
         case 39: // arrow-right
             moveTrailerRight = true;
             break;
+        case 82: //R
+        case 114: //r
+            rotateHeadIn = true;
+            break;
+        case 70: //F
+        case 102: //f
+            rotateHeadOut = true;
+            break;
     }
 
 }
@@ -481,6 +604,14 @@ function onKeyUp(e){
             break;
         case 39: // arrow-right
             moveTrailerRight = false;
+            break;
+        case 82: //R
+        case 114: //r
+            rotateHeadIn = false;
+            break;
+        case 70: //F
+        case 102: //f
+            rotateHeadOut = false;
             break;
     }
 }
