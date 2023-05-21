@@ -395,22 +395,22 @@ function createCameras() {
     }
     cameras[0].position.x = 0;
     cameras[0].position.y = 0;
-    cameras[0].position.z = 100;
+    cameras[0].position.z = 70;
     cameras[0].lookAt(scene.position);
 
-    cameras[1].position.x = 100;
+    cameras[1].position.x = 70;
     cameras[1].position.y = 0;
     cameras[1].position.z = 0;
     cameras[1].lookAt(scene.position);
 
     cameras[2].position.x = 0;
-    cameras[2].position.y = 100;
+    cameras[2].position.y = 70;
     cameras[2].position.z = 0;
     cameras[2].lookAt(scene.position);
 
-    cameras[3].position.x = 100;
-    cameras[3].position.y = 100;
-    cameras[3].position.z = 100;
+    cameras[3].position.x = 70;
+    cameras[3].position.y = 70;
+    cameras[3].position.z = 70;
     cameras[3].lookAt(scene.position);
 
     //perspective camera (5)
@@ -468,12 +468,14 @@ function update(){
     }
 
     if (rotateHeadIn) {
-        head.position.set(0, Y_HEAD_BASE, 0);
+        head.translateY(-Y_HEAD_BASE/2-0.05*SIZE_SCALING);
         head.rotateX(HEAD_ROTATION_ANGLE*delta);
+        head.translateY(Y_HEAD_BASE/2+0.05*SIZE_SCALING);
     }
     if (rotateHeadOut) {
-        //head.position.set(0, Y_HEAD_BASE, 0);
+        head.translateY(-Y_HEAD_BASE/2-0.05*SIZE_SCALING);
         head.rotateX(-HEAD_ROTATION_ANGLE*delta);
+        head.translateY(Y_HEAD_BASE/2+0.05*SIZE_SCALING);
     }
 }
 
