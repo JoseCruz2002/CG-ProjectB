@@ -13,7 +13,6 @@ var trailer;
 var head;
 var leftArm;
 var rightArm;
-var leftLeg;
 
 var wireFramedChange = false, wireFramedChanged = false;
 var moveTrailerForward = false;
@@ -22,7 +21,7 @@ var moveTrailerLeft = false;
 var moveTrailerRight = false;
 var rotateHeadIn = false;
 var rotateHeadOut = false;
-var moveArmsLaterally = false;
+var moveArmsIn = false, moveArmsOut = false;
 
 // These constaants are used for indexing the materials of each part of the objects.
 const CONTAINER_INDEX = 0;
@@ -33,9 +32,11 @@ const WHEEL_JOINT_INDEX = 3;
 const TORSO_INDEX = 4;
 const ABDOMEN_INDEX = 5;
 const WAIST_INDEX = 6;
+
 const HEAD_BASE_INDEX = 7;
 const EYES_INDEX = 8;
 const ANTENAS_INDEX = 9;
+
 const ARM_INDEX = 10;
 const EXHAUST_INDEX = 11;
 const LEGS_INDEX = 12;
@@ -99,11 +100,15 @@ const HEAD_ROTATION_ANGLE = Math.PI;
 const X_UPPER_ARM = 0.3 * SIZE_SCALING;
 const Y_UPPER_ARM = 0.8 * SIZE_SCALING;
 const Z_UPPER_ARM = 0.2 * SIZE_SCALING;
+
 const X_FORE_ARM = 0.3 * SIZE_SCALING;
 const Y_FORE_ARM = 0.2 * SIZE_SCALING;
 const Z_FORE_ARM = 0.7 * SIZE_SCALING;
+
 const R_EXHAUST = 0.1 / 2 * SIZE_SCALING;
 const H_EXHAUST = 0.2 * SIZE_SCALING;
+
+const ARM_VELOCITY = 30;
 
 // legs of the robot
 
@@ -396,28 +401,50 @@ function createExhaustPipe(obj, x, y, z) {
 }
 
 /**
- * Creates the arm of the robot
+ * Creates the left arm of the robot
  * 
  * @param {*} obj parent object - baseForRobot
- * @param {*} x 
- * @param {*} y 
+ * @param {*} x
+ * @param {*} y
  * @param {*} z 
  */
-function createArm(obj, obj1, x, y, z) {
+function createLeftArm(obj, x, y, z) {
     'use strict'
 
-    obj1 = new THREE.Object3D();
+    leftArm = new THREE.Object3D();
 
     materials[ARM_INDEX] = new THREE.MeshBasicMaterial({ color: 0x5500aa, wireframe: true });
     materials[EXHAUST_INDEX] = new THREE.MeshBasicMaterial({ color: 0x00aaaa, wireframe: true });
 
-    createUpperArm(obj1, 0, 0, 0);
-    createForeArm(obj1, 0, -(Y_UPPER_ARM / 2), Z_UPPER_ARM);
-    createExhaustPipe(obj1, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
+    createUpperArm(leftArm, 0, 0, 0);
+    createForeArm(leftArm, 0, -(Y_UPPER_ARM+Y_FORE_ARM)/2, Z_UPPER_ARM+0.06*SIZE_SCALING);
+    createExhaustPipe(leftArm, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
 
-    obj1.position.set(x, y, z);
+    leftArm.position.set(x, y, z);
 
-    obj.add(obj1);
+    obj.add(leftArm);
+}
+
+/**
+ * Creates the right arm of the robot
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x
+ * @param {*} y
+ * @param {*} z 
+ */
+function createRightArm(obj, x, y, z) {
+    'use strict'
+
+    rightArm = new THREE.Object3D();
+
+    createUpperArm(rightArm, 0, 0, 0);
+    createForeArm(rightArm, 0, -(Y_UPPER_ARM+Y_FORE_ARM)/2, Z_UPPER_ARM+0.06*SIZE_SCALING);
+    createExhaustPipe(rightArm, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
+
+    rightArm.position.set(x, y, z);
+
+    obj.add(rightArm);
 }
 
 /**
@@ -491,11 +518,11 @@ function createBaseForRobot(obj, x, y, z) {
 
     createHead(baseForRobot, 0, Y_TORSO / 2, 0);
 
-    createArm(baseForRobot, leftArm, (X_UPPER_ARM + X_TORSO) / 2, 0, 0); //left arm
-    createArm(baseForRobot, rightArm, -(X_UPPER_ARM + X_TORSO) / 2, 0, 0); //right arm
+    createLeftArm(baseForRobot, (X_UPPER_ARM + X_TORSO) / 2, 0, 0);
+    createRightArm(baseForRobot, -(X_UPPER_ARM + X_TORSO) / 2, 0, 0);
 
-    createLeg(baseForRobot, leftLeg, X_WAIST / 2 + X_UPPER_LEG / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
-    createLeg(baseForRobot, leftLeg, -(X_WAIST / 2 + X_UPPER_LEG / 2), -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
+    //createLeg(baseForRobot, leftLeg, X_WAIST / 2 + X_UPPER_LEG / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
+    //createLeg(baseForRobot, leftLeg, -(X_WAIST / 2 + X_UPPER_LEG / 2), -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
 
     obj.add(baseForRobot);
 }
@@ -598,9 +625,9 @@ function update() {
     'use strict';
 
     var delta = clock.getDelta();
-
+    
+    // changes the wireframe attribute of all the materials
     if (wireFramedChange && !wireFramedChanged) {
-        // changes the wireframe attribute of all the materials
         for (let i = 0; i < materials.length; i++) {
             if (materials[i] != undefined) {
                 materials[i].wireframe = !materials[i].wireframe;
@@ -627,10 +654,17 @@ function update() {
         trailer.translateOnAxis(new THREE.Vector3(x_motion, 0, z_motion).normalize(), TRAILER_VELOCITY_X * delta);
     }
 
-    if (moveArmsLaterally) {
-        
+    // moves the arms in and out the torso
+    if (moveArmsIn) {
+        leftArm.position.x = THREE.Math.clamp(leftArm.position.x-ARM_VELOCITY*delta, (-X_UPPER_ARM+X_TORSO)/2, (X_UPPER_ARM+X_TORSO)/2);
+        rightArm.position.x = THREE.Math.clamp(rightArm.position.x+ARM_VELOCITY*delta, -(X_UPPER_ARM+X_TORSO)/2, -(-X_UPPER_ARM+X_TORSO)/2);
+    }
+    if (moveArmsOut) {
+        leftArm.position.x = THREE.Math.clamp(leftArm.position.x+ARM_VELOCITY*delta, (-X_UPPER_ARM+X_TORSO)/2, (X_UPPER_ARM+X_TORSO)/2);
+        rightArm.position.x = THREE.Math.clamp(rightArm.position.x-ARM_VELOCITY*delta, -(X_UPPER_ARM+X_TORSO)/2, -(-X_UPPER_ARM+X_TORSO)/2);
     }
 
+    // rotates the head in or out the robot 
     if (rotateHeadIn) {
         head.translateY(-Y_HEAD_BASE / 2 - 0.05 * SIZE_SCALING);
         head.rotation.x = THREE.Math.clamp(head.rotation.x + HEAD_ROTATION_ANGLE * delta, 0, Math.PI);
@@ -741,8 +775,13 @@ function onKeyDown(e) {
         case 39: // arrow-right
             moveTrailerRight = true;
             break;
-        case 69: // e
-            moveArmsLaterally = true;
+        case 69: //E
+        case 101: //e
+            moveArmsIn = true;
+            break;
+        case 68: //D
+        case 100: //d
+            moveArmsOut = true;
             break;
         case 82: //R
         case 114: //r
@@ -780,7 +819,11 @@ function onKeyUp(e) {
             break;
         case 69: //E
         case 101: //e
-            moveArmsLaterally = false;
+            moveArmsIn = false;
+            break;
+        case 68: //D
+        case 100: //d
+            moveArmsOut = false;
             break;
         case 82: //R
         case 114: //r
