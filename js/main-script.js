@@ -11,14 +11,18 @@ var clock;
 
 var trailer;
 var head;
+var leftArm;
+var rightArm;
+var leftLeg;
 
-var wireFramed = true;
+var wireFramedChange = false, wireFramedChanged = false;
 var moveTrailerForward = false;
 var moveTrailerBack = false;
 var moveTrailerLeft = false;
 var moveTrailerRight = false;
 var rotateHeadIn = false;
 var rotateHeadOut = false;
+var moveArmsLaterally = false;
 
 // These constaants are used for indexing the materials of each part of the objects.
 const CONTAINER_INDEX = 0;
@@ -32,6 +36,9 @@ const WAIST_INDEX = 6;
 const HEAD_BASE_INDEX = 7;
 const EYES_INDEX = 8;
 const ANTENAS_INDEX = 9;
+const ARM_INDEX = 10;
+const EXHAUST_INDEX = 11;
+const LEGS_INDEX = 12;
 
 /* Constants to use */
 const SIZE_SCALING = 30;
@@ -82,10 +89,27 @@ const Z_EYE = 0.1 * SIZE_SCALING;
 const X_EYE_TRANSLATION = 0.08 * SIZE_SCALING;
 const Y_EYE_TRANSLATION = 0.05 * SIZE_SCALING;
 
-const R_ANTENA = 0.1/2 * SIZE_SCALING;
-const H_ANTENA = 0.1 * SIZE_SCALING; 
+const R_ANTENA = 0.1 / 2 * SIZE_SCALING;
+const H_ANTENA = 0.1 * SIZE_SCALING;
 
 const HEAD_ROTATION_ANGLE = Math.PI;
+
+// arms of the robot, with the upper and lower arm 
+
+const X_UPPER_ARM = 0.3 * SIZE_SCALING;
+const Y_UPPER_ARM = 0.8 * SIZE_SCALING;
+const Z_UPPER_ARM = 0.2 * SIZE_SCALING;
+const X_FORE_ARM = 0.3 * SIZE_SCALING;
+const Y_FORE_ARM = 0.2 * SIZE_SCALING;
+const Z_FORE_ARM = 0.7 * SIZE_SCALING;
+const R_EXHAUST = 0.1 / 2 * SIZE_SCALING;
+const H_EXHAUST = 0.2 * SIZE_SCALING;
+
+// legs of the robot
+
+const X_UPPER_LEG = 0.2 * SIZE_SCALING;
+const Y_UPPER_LEG = 0.3 * SIZE_SCALING;
+const Z_UPPER_LEG = 1.6 * SIZE_SCALING;
 
 //---------------------------------------------------------------------------------
 
@@ -123,7 +147,7 @@ function createWheel(obj, x, y, z) {
 
     geometry = new THREE.CylinderGeometry(R_WHEEL, R_WHEEL, H_WHEEL, 34);
     mesh = new THREE.Mesh(geometry, materials[WHEEL_INDEX]);
-    mesh.rotation.z = Math.PI/2;
+    mesh.rotation.z = Math.PI / 2;
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -141,7 +165,7 @@ function createCouplingDevice(obj, x, y, z) {
 
     geometry = new THREE.CubeGeometry(X_COUPLE, Y_COUPLE, Z_COUPLE);
     mesh = new THREE.Mesh(geometry, materials[COUPLE_INDEX]);
-    mesh.position.set(x, y ,z);
+    mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
@@ -158,7 +182,7 @@ function createContainer(obj, x, y, z) {
 
     geometry = new THREE.CubeGeometry(X_CONTAINER, Y_CONTAINER, Z_CONTAINER);
     mesh = new THREE.Mesh(geometry, materials[CONTAINER_INDEX]);
-    mesh.position.set(x, y ,z);
+    mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
@@ -168,19 +192,19 @@ function createTrailer(x, y, z) {
 
     trailer = new THREE.Object3D();
 
-    materials[CONTAINER_INDEX] = new THREE.MeshBasicMaterial({color: 0x807979, wireframe: true});
-    materials[COUPLE_INDEX] = new THREE.MeshBasicMaterial({color: 0x807900, wireframe: true});
-    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({color: 0x800079, wireframe: true});
-    materials[WHEEL_JOINT_INDEX] = new THREE.MeshBasicMaterial({color: 0x007979, wireframe: true});
+    materials[CONTAINER_INDEX] = new THREE.MeshBasicMaterial({ color: 0x807979, wireframe: true });
+    materials[COUPLE_INDEX] = new THREE.MeshBasicMaterial({ color: 0x807900, wireframe: true });
+    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({ color: 0x800079, wireframe: true });
+    materials[WHEEL_JOINT_INDEX] = new THREE.MeshBasicMaterial({ color: 0x007979, wireframe: true });
 
     createContainer(trailer, 0, 0, 0);
-    createWheelJoint(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT)/2, -(Z_CONTAINER-Z_WHEEL_JOINT)/2);
-    createWheelJoint(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT)/2, -(Z_CONTAINER-Z_WHEEL_JOINT)/2);
-    createWheel(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT+R_WHEEL*3-Z_CONTAINER)/2);
-    createWheel(trailer, (X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
-    createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT+R_WHEEL*3-Z_CONTAINER)/2);
-    createWheel(trailer, -(X_CONTAINER-X_WHEEL_JOINT)/2, -(Y_CONTAINER+Y_WHEEL_JOINT+R_WHEEL*2)/2, (Z_WHEEL_JOINT-R_WHEEL*3-Z_CONTAINER)/2);
-    createCouplingDevice(trailer, 0, -(Y_CONTAINER+Y_COUPLE)/2, Z_COUPLE_TRANSLATION);
+    createWheelJoint(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT) / 2, -(Z_CONTAINER - Z_WHEEL_JOINT) / 2);
+    createWheelJoint(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT) / 2, -(Z_CONTAINER - Z_WHEEL_JOINT) / 2);
+    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createCouplingDevice(trailer, 0, -(Y_CONTAINER + Y_COUPLE) / 2, Z_COUPLE_TRANSLATION);
 
     scene.add(trailer);
 
@@ -200,7 +224,7 @@ function createTorso(obj, x, y, z) {
 
     geometry = new THREE.CubeGeometry(X_TORSO, Y_TORSO, Z_TORSO);
     mesh = new THREE.Mesh(geometry, materials[TORSO_INDEX]);
-    mesh.position.set(x, y ,z);
+    mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
@@ -217,7 +241,7 @@ function createAbdomen(obj, x, y, z) {
 
     geometry = new THREE.CubeGeometry(X_ABDOMEN, Y_ABDOMEN, Z_ABDOMEN);
     mesh = new THREE.Mesh(geometry, materials[ABDOMEN_INDEX]);
-    mesh.position.set(x, y ,z);
+    mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
@@ -234,7 +258,7 @@ function createWaist(obj, x, y, z) {
 
     geometry = new THREE.CubeGeometry(X_WAIST, Y_WAIST, Z_WAIST);
     mesh = new THREE.Mesh(geometry, materials[WAIST_INDEX]);
-    mesh.position.set(x, y ,z);
+    mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
@@ -304,19 +328,141 @@ function createHead(obj, x, y, z) {
 
     head = new THREE.Object3D();
 
-    materials[HEAD_BASE_INDEX] = new THREE.MeshBasicMaterial({color: 0xaaaa00, wireframe: true});
-    materials[EYES_INDEX] = new THREE.MeshBasicMaterial({color: 0xaa00aa, wireframe: true});
-    materials[ANTENAS_INDEX] = new THREE.MeshBasicMaterial({color: 0x00aaaa, wireframe: true});
+    materials[HEAD_BASE_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaaaa00, wireframe: true });
+    materials[EYES_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaa00aa, wireframe: true });
+    materials[ANTENAS_INDEX] = new THREE.MeshBasicMaterial({ color: 0x00aaaa, wireframe: true });
 
     createHeadBase(head, 0, 0, 0);
-    createEye(head, X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE-Z_EYE)/2+0.01*SIZE_SCALING);
-    createEye(head, -X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE-Z_EYE)/2+0.01*SIZE_SCALING);
-    createAntena(head, (X_HEAD_BASE-R_ANTENA*2)/2, (Y_HEAD_BASE+H_ANTENA)/2, 0);
-    createAntena(head, -(X_HEAD_BASE-R_ANTENA*2)/2, (Y_HEAD_BASE+H_ANTENA)/2, 0);
+    createEye(head, X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE - Z_EYE) / 2 + 0.01 * SIZE_SCALING);
+    createEye(head, -X_EYE_TRANSLATION, Y_EYE_TRANSLATION, (Z_HEAD_BASE - Z_EYE) / 2 + 0.01 * SIZE_SCALING);
+    createAntena(head, (X_HEAD_BASE - R_ANTENA * 2) / 2, (Y_HEAD_BASE + H_ANTENA) / 2, 0);
+    createAntena(head, -(X_HEAD_BASE - R_ANTENA * 2) / 2, (Y_HEAD_BASE + H_ANTENA) / 2, 0);
 
-    head.position.set(x, y+Y_HEAD_BASE/2, z);
+    head.position.set(x, y + Y_HEAD_BASE / 2, z);
 
     obj.add(head);
+}
+
+
+/**
+ * Creates an upper arm.
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createUpperArm(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_UPPER_ARM, Y_UPPER_ARM, Z_UPPER_ARM);
+    mesh = new THREE.Mesh(geometry, materials[ARM_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates a forearm.
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createForeArm(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_FORE_ARM, Y_FORE_ARM, Z_FORE_ARM);
+    mesh = new THREE.Mesh(geometry, materials[ARM_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates an tube for the arm.
+ * 
+ * @param {*} obj parent object - head
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createExhaustPipe(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CylinderGeometry(R_EXHAUST, R_EXHAUST, H_EXHAUST, 30);
+    mesh = new THREE.Mesh(geometry, materials[ANTENAS_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the arm of the robot
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createArm(obj, obj1, x, y, z) {
+    'use strict'
+
+    obj1 = new THREE.Object3D();
+
+    materials[ARM_INDEX] = new THREE.MeshBasicMaterial({ color: 0x5500aa, wireframe: true });
+    materials[EXHAUST_INDEX] = new THREE.MeshBasicMaterial({ color: 0x00aaaa, wireframe: true });
+
+    createUpperArm(obj1, 0, 0, 0);
+    createForeArm(obj1, 0, -(Y_UPPER_ARM / 2), Z_UPPER_ARM);
+    createExhaustPipe(obj1, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
+
+    obj1.position.set(x, y, z);
+
+    obj.add(obj1);
+}
+
+/**
+ * Creates an upper leg.
+ * 
+ * @param {*} obj 
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createUpperLeg(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_UPPER_LEG, Y_UPPER_LEG, Z_UPPER_LEG);
+    mesh = new THREE.Mesh(geometry, materials[LEGS_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the leg of the robot
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createLeg(obj, obj1, x, y, z) {
+    'use strict'
+
+    obj1 = new THREE.Object3D();
+
+    materials[ARM_INDEX] = new THREE.MeshBasicMaterial({ color: 0x55aa00, wireframe: true });
+    materials[EXHAUST_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaa5500, wireframe: true });
+
+
+    createUpperLeg(obj1, 0, 0, 0);
+    createWheel/*on leg*/(obj1, 0, 0, -(Z_UPPER_LEG / 4));
+    createWheel/*on leg*/(obj1, 0, 0, (Z_UPPER_LEG / 6));
+    //createForeArm(obj1, 0, -(Y_UPPER_ARM/2), Z_UPPER_ARM);
+    //createTuboDeEscape(obj1, 0,(Y_UPPER_ARM/2)+(H_TUBO/2),0)
+
+    obj1.position.set(x, y, z);
+
+    obj.add(obj1);
 }
 
 /**
@@ -332,18 +478,24 @@ function createBaseForRobot(obj, x, y, z) {
 
     var baseForRobot = new THREE.Object3D();
 
-    materials[TORSO_INDEX] = new THREE.MeshBasicMaterial({color: 0x00aa00, wireframe: true});
-    materials[ABDOMEN_INDEX] = new THREE.MeshBasicMaterial({color: 0xaa0000, wireframe: true});
-    materials[WAIST_INDEX] = new THREE.MeshBasicMaterial({color: 0x0000aa, wireframe: true});
-    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({color: 0x800079, wireframe: true});
+    materials[TORSO_INDEX] = new THREE.MeshBasicMaterial({ color: 0x00aa00, wireframe: true });
+    materials[ABDOMEN_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaa0000, wireframe: true });
+    materials[WAIST_INDEX] = new THREE.MeshBasicMaterial({ color: 0x0000aa, wireframe: true });
+    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({ color: 0x800079, wireframe: true });
 
     createTorso(baseForRobot, 0, 0, 0);
-    createAbdomen(baseForRobot, 0, -(Y_TORSO+Y_ABDOMEN)/2, 0);
-    createWaist(baseForRobot, 0, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, 0);
-    createWheel/*on waist*/(baseForRobot, (X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
-    createWheel/*on waist*/(baseForRobot, -(X_WAIST+H_WHEEL)/2, -(Y_TORSO+Y_ABDOMEN*2+Y_WAIST)/2, (Z_WAIST-R_WHEEL*2)/2);
+    createAbdomen(baseForRobot, 0, -(Y_TORSO + Y_ABDOMEN) / 2, 0);
+    createWaist(baseForRobot, 0, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, 0);
+    createWheel/*on waist*/(baseForRobot, (X_WAIST + H_WHEEL) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, (Z_WAIST - R_WHEEL * 2) / 2);
+    createWheel/*on waist*/(baseForRobot, -(X_WAIST + H_WHEEL) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, (Z_WAIST - R_WHEEL * 2) / 2);
 
-    createHead(baseForRobot, 0, Y_TORSO/2, 0);
+    createHead(baseForRobot, 0, Y_TORSO / 2, 0);
+
+    createArm(baseForRobot, leftArm, (X_UPPER_ARM + X_TORSO) / 2, 0, 0); //left arm
+    createArm(baseForRobot, rightArm, -(X_UPPER_ARM + X_TORSO) / 2, 0, 0); //right arm
+
+    createLeg(baseForRobot, leftLeg, X_WAIST / 2 + X_UPPER_LEG / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
+    createLeg(baseForRobot, leftLeg, -(X_WAIST / 2 + X_UPPER_LEG / 2), -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
 
     obj.add(baseForRobot);
 }
@@ -390,8 +542,8 @@ function createCameras() {
 
     //orthogonal cameras (1, 2, 3, 4)
     for (let i = 0; i < 4; i++) {
-        cameras[i] = new THREE.OrthographicCamera(window.innerWidth/-2, window.innerWidth/2, 
-                     window.innerHeight/2, window.innerHeight/-2, 1, 1000);
+        cameras[i] = new THREE.OrthographicCamera(window.innerWidth / -2, window.innerWidth / 2,
+            window.innerHeight / 2, window.innerHeight / -2, 1, 1000);
     }
     cameras[0].position.x = 0;
     cameras[0].position.y = 0;
@@ -426,7 +578,7 @@ function createCameras() {
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions(){
+function checkCollisions() {
     'use strict';
 
 }
@@ -434,7 +586,7 @@ function checkCollisions(){
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions(){
+function handleCollisions() {
     'use strict';
 
 }
@@ -442,40 +594,52 @@ function handleCollisions(){
 ////////////
 /* UPDATE */
 ////////////
-function update(){
+function update() {
     'use strict';
 
     var delta = clock.getDelta();
-    // changes the wireframe attribute of all the materials
-    for (let i = 0; i < materials.length; i++) {
-        if (materials[i] != undefined) {
-            materials[i].wireframe = wireFramed;
+
+    if (wireFramedChange && !wireFramedChanged) {
+        // changes the wireframe attribute of all the materials
+        for (let i = 0; i < materials.length; i++) {
+            if (materials[i] != undefined) {
+                materials[i].wireframe = !materials[i].wireframe;
+            }
         }
+        wireFramedChanged = true;
     }
 
     // moves the trailer
+    var z_motion = 0, x_motion = 0;
     if (moveTrailerForward) {
-        trailer.position.z = trailer.position.z + TRAILER_VELOCITY_Z*delta;
+        z_motion -= 1;
     }
     if (moveTrailerBack) {
-        trailer.position.z = trailer.position.z - TRAILER_VELOCITY_Z*delta;
+        z_motion += 1;
     }
     if (moveTrailerLeft) {
-        trailer.position.x = trailer.position.x - TRAILER_VELOCITY_X*delta;
+        x_motion -= 1;
     }
     if (moveTrailerRight) {
-        trailer.position.x = trailer.position.x + TRAILER_VELOCITY_X*delta;
+        x_motion += 1;
+    }
+    if (z_motion != 0 || x_motion != 0) {
+        trailer.translateOnAxis(new THREE.Vector3(x_motion, 0, z_motion).normalize(), TRAILER_VELOCITY_X * delta);
+    }
+
+    if (moveArmsLaterally) {
+        
     }
 
     if (rotateHeadIn) {
-        head.translateY(-Y_HEAD_BASE/2-0.05*SIZE_SCALING);
-        head.rotateX(HEAD_ROTATION_ANGLE*delta);
-        head.translateY(Y_HEAD_BASE/2+0.05*SIZE_SCALING);
+        head.translateY(-Y_HEAD_BASE / 2 - 0.05 * SIZE_SCALING);
+        head.rotation.x = THREE.Math.clamp(head.rotation.x + HEAD_ROTATION_ANGLE * delta, 0, Math.PI);
+        head.translateY(Y_HEAD_BASE / 2 + 0.05 * SIZE_SCALING);
     }
     if (rotateHeadOut) {
-        head.translateY(-Y_HEAD_BASE/2-0.05*SIZE_SCALING);
-        head.rotateX(-HEAD_ROTATION_ANGLE*delta);
-        head.translateY(Y_HEAD_BASE/2+0.05*SIZE_SCALING);
+        head.translateY(-Y_HEAD_BASE / 2 - 0.05 * SIZE_SCALING);
+        head.rotation.x = THREE.Math.clamp(head.rotation.x - HEAD_ROTATION_ANGLE * delta, 0, Math.PI);
+        head.translateY(Y_HEAD_BASE / 2 + 0.05 * SIZE_SCALING);
     }
 }
 
@@ -493,7 +657,7 @@ function render() {
 function init() {
     'use strict';
 
-    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
@@ -526,13 +690,13 @@ function animate() {
 ////////////////////////////
 /* RESIZE WINDOW CALLBACK */
 ////////////////////////////
-function onResize() { 
+function onResize() {
     'use strict';
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < cameras.length; i++) {
             cameras[i].aspect = window.innerWidth / window.innerHeight;
             cameras[i].updateProjectionMatrix();
         }
@@ -562,7 +726,8 @@ function onKeyDown(e) {
             currentCameraIndex = 4;
             break;
         case 54: //6
-            wireFramed = !wireFramed;
+            wireFramedChange = true;
+            wireFramedChanged = false;
             break;
         case 38: // arrow-up
             moveTrailerForward = true;
@@ -575,6 +740,9 @@ function onKeyDown(e) {
             break;
         case 39: // arrow-right
             moveTrailerRight = true;
+            break;
+        case 69: // e
+            moveArmsLaterally = true;
             break;
         case 82: //R
         case 114: //r
@@ -591,7 +759,7 @@ function onKeyDown(e) {
 ///////////////////////
 /* KEY UP CALLBACK */
 ///////////////////////
-function onKeyUp(e){
+function onKeyUp(e) {
     'use strict';
 
     switch (e.keyCode) {
@@ -606,6 +774,13 @@ function onKeyUp(e){
             break;
         case 39: // arrow-right
             moveTrailerRight = false;
+            break;
+        case 54: //6
+            wireFramedChange = false;
+            break;
+        case 69: //E
+        case 101: //e
+            moveArmsLaterally = false;
             break;
         case 82: //R
         case 114: //r
