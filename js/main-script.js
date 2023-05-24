@@ -13,6 +13,8 @@ var trailer;
 var head;
 var leftArm;
 var rightArm;
+var leftLeg;
+var rightLeg;
 
 var wireFramedChange = false, wireFramedChanged = false;
 var moveTrailerForward = false;
@@ -22,6 +24,7 @@ var moveTrailerRight = false;
 var rotateHeadIn = false;
 var rotateHeadOut = false;
 var moveArmsIn = false, moveArmsOut = false;
+var rotateLegsBack = false, rotateLegsForward = false;
 
 // These constaants are used for indexing the materials of each part of the objects.
 const CONTAINER_INDEX = 0;
@@ -39,9 +42,13 @@ const ANTENAS_INDEX = 9;
 
 const ARM_INDEX = 10;
 const EXHAUST_INDEX = 11;
-const LEGS_INDEX = 12;
 
-/* Constants to use */
+const UPPER_LEGS_INDEX = 12;
+const LOWER_LEGS_INDEX = 13;
+
+// -------------------------------------------------------------------------------------
+
+/* This number is a mere scale for all objects and transformations */
 const SIZE_SCALING = 30;
 
 // Scaling sizes for the trailer components (the wheels are also used in the robot)
@@ -113,8 +120,14 @@ const ARM_VELOCITY = 30;
 // legs of the robot
 
 const X_UPPER_LEG = 0.2 * SIZE_SCALING;
-const Y_UPPER_LEG = 0.3 * SIZE_SCALING;
-const Z_UPPER_LEG = 1.6 * SIZE_SCALING;
+const Y_UPPER_LEG = 0.5 * SIZE_SCALING;
+const Z_UPPER_LEG = 0.3 * SIZE_SCALING;
+
+const X_LOWER_LEG = 0.3 * SIZE_SCALING;
+const Y_LOWER_LEG = 1.2 * SIZE_SCALING;
+const Z_LOWER_LEG = 0.3 * SIZE_SCALING;
+
+const LEGS_ROTATION_ANGLE = Math.PI;
 
 //---------------------------------------------------------------------------------
 
@@ -352,7 +365,7 @@ function createHead(obj, x, y, z) {
 /**
  * Creates an upper arm.
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - an arm, either the left or the right
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -369,7 +382,7 @@ function createUpperArm(obj, x, y, z) {
 /**
  * Creates a forearm.
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - an arm, either the left or the right
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -386,7 +399,7 @@ function createForeArm(obj, x, y, z) {
 /**
  * Creates an tube for the arm.
  * 
- * @param {*} obj parent object - head
+ * @param {*} obj parent object - an arm, either the left or the right
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -417,7 +430,7 @@ function createLeftArm(obj, x, y, z) {
     materials[EXHAUST_INDEX] = new THREE.MeshBasicMaterial({ color: 0x00aaaa, wireframe: true });
 
     createUpperArm(leftArm, 0, 0, 0);
-    createForeArm(leftArm, 0, -(Y_UPPER_ARM+Y_FORE_ARM)/2, Z_UPPER_ARM+0.06*SIZE_SCALING);
+    createForeArm(leftArm, 0, -(Y_UPPER_ARM + Y_FORE_ARM) / 2, Z_UPPER_ARM + 0.06 * SIZE_SCALING);
     createExhaustPipe(leftArm, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
 
     leftArm.position.set(x, y, z);
@@ -439,7 +452,7 @@ function createRightArm(obj, x, y, z) {
     rightArm = new THREE.Object3D();
 
     createUpperArm(rightArm, 0, 0, 0);
-    createForeArm(rightArm, 0, -(Y_UPPER_ARM+Y_FORE_ARM)/2, Z_UPPER_ARM+0.06*SIZE_SCALING);
+    createForeArm(rightArm, 0, -(Y_UPPER_ARM + Y_FORE_ARM) / 2, Z_UPPER_ARM + 0.06 * SIZE_SCALING);
     createExhaustPipe(rightArm, 0, (Y_UPPER_ARM / 2) + (H_EXHAUST / 2), 0)
 
     rightArm.position.set(x, y, z);
@@ -450,7 +463,7 @@ function createRightArm(obj, x, y, z) {
 /**
  * Creates an upper leg.
  * 
- * @param {*} obj 
+ * @param {*} obj parent object - either the left or the right leg
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -459,37 +472,77 @@ function createUpperLeg(obj, x, y, z) {
     'use strict';
 
     geometry = new THREE.CubeGeometry(X_UPPER_LEG, Y_UPPER_LEG, Z_UPPER_LEG);
-    mesh = new THREE.Mesh(geometry, materials[LEGS_INDEX]);
+    mesh = new THREE.Mesh(geometry, materials[UPPER_LEGS_INDEX]);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 /**
- * Creates the leg of the robot
+ * Creates a lower leg.
+ * 
+ * @param {*} obj parent object - either the left or the right leg
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createLowerLeg(obj, x, y, z) {
+    'use strict';
+
+    geometry = new THREE.CubeGeometry(X_LOWER_LEG, Y_LOWER_LEG, Z_LOWER_LEG);
+    mesh = new THREE.Mesh(geometry, materials[LOWER_LEGS_INDEX]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+/**
+ * Creates the left leg of the robot, with the tighs, lower leg and it´s wheels.
  * 
  * @param {*} obj parent object - baseForRobot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
  */
-function createLeg(obj, obj1, x, y, z) {
+function createLeftLeg(obj, x, y, z) {
     'use strict'
 
-    obj1 = new THREE.Object3D();
+    leftLeg = new THREE.Object3D();
 
-    materials[ARM_INDEX] = new THREE.MeshBasicMaterial({ color: 0x55aa00, wireframe: true });
-    materials[EXHAUST_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaa5500, wireframe: true });
+    materials[UPPER_LEGS_INDEX] = new THREE.MeshBasicMaterial({ color: 0x55aa9f, wireframe: true });
+    materials[LOWER_LEGS_INDEX] = new THREE.MeshBasicMaterial({ color: 0xaa559f, wireframe: true });
 
+    createUpperLeg(leftLeg, 0, 0, 0);
+    createLowerLeg(leftLeg, 0, -(Y_UPPER_LEG + Y_LOWER_LEG) / 2, 0);
+    createWheel/*on leg*/(leftLeg, (X_LOWER_LEG + H_WHEEL) / 2, -(Y_UPPER_LEG + R_WHEEL * 3) / 2, R_WHEEL / 3);
+    createWheel/*on leg*/(leftLeg, (X_LOWER_LEG + H_WHEEL) / 2, -(Y_UPPER_LEG + Y_LOWER_LEG + R_WHEEL * 2.5) / 2, R_WHEEL / 3);
 
-    createUpperLeg(obj1, 0, 0, 0);
-    createWheel/*on leg*/(obj1, 0, 0, -(Z_UPPER_LEG / 4));
-    createWheel/*on leg*/(obj1, 0, 0, (Z_UPPER_LEG / 6));
-    //createForeArm(obj1, 0, -(Y_UPPER_ARM/2), Z_UPPER_ARM);
-    //createTuboDeEscape(obj1, 0,(Y_UPPER_ARM/2)+(H_TUBO/2),0)
+    leftLeg.position.set(x, y, z);
 
-    obj1.position.set(x, y, z);
+    obj.add(leftLeg);
+}
 
-    obj.add(obj1);
+/**
+ * Creates the right leg of the robot, with the tighs, lower leg and it´s wheels.
+ * 
+ * @param {*} obj parent object - baseForRobot
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} z 
+ */
+function createRightLeg(obj, x, y, z) {
+    'use strict'
+
+    rightLeg = new THREE.Object3D();
+
+    // materials already instanciated
+
+    createUpperLeg(rightLeg, 0, 0, 0);
+    createLowerLeg(rightLeg, 0, -(Y_UPPER_LEG + Y_LOWER_LEG) / 2, 0);
+    createWheel/*on leg*/(rightLeg, -(X_LOWER_LEG + H_WHEEL) / 2, -(Y_UPPER_LEG + R_WHEEL * 3) / 2, R_WHEEL / 3);
+    createWheel/*on leg*/(rightLeg, -(X_LOWER_LEG + H_WHEEL) / 2, -(Y_UPPER_LEG + Y_LOWER_LEG + R_WHEEL * 2.5) / 2, R_WHEEL / 3);
+
+    rightLeg.position.set(x, y, z);
+
+    obj.add(rightLeg);
 }
 
 /**
@@ -521,8 +574,8 @@ function createBaseForRobot(obj, x, y, z) {
     createLeftArm(baseForRobot, (X_UPPER_ARM + X_TORSO) / 2, 0, 0);
     createRightArm(baseForRobot, -(X_UPPER_ARM + X_TORSO) / 2, 0, 0);
 
-    //createLeg(baseForRobot, leftLeg, X_WAIST / 2 + X_UPPER_LEG / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
-    //createLeg(baseForRobot, leftLeg, -(X_WAIST / 2 + X_UPPER_LEG / 2), -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, -(Z_UPPER_LEG / 2));
+    createLeftLeg(baseForRobot, (X_WAIST - X_UPPER_LEG) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG) / 2, Z_UPPER_LEG / 3);
+    createRightLeg(baseForRobot, -(X_WAIST - X_UPPER_LEG) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG) / 2, Z_UPPER_LEG / 3);
 
     obj.add(baseForRobot);
 }
@@ -625,7 +678,7 @@ function update() {
     'use strict';
 
     var delta = clock.getDelta();
-    
+
     // changes the wireframe attribute of all the materials
     if (wireFramedChange && !wireFramedChanged) {
         for (let i = 0; i < materials.length; i++) {
@@ -656,12 +709,12 @@ function update() {
 
     // moves the arms in and out the torso
     if (moveArmsIn) {
-        leftArm.position.x = THREE.Math.clamp(leftArm.position.x-ARM_VELOCITY*delta, (-X_UPPER_ARM+X_TORSO)/2, (X_UPPER_ARM+X_TORSO)/2);
-        rightArm.position.x = THREE.Math.clamp(rightArm.position.x+ARM_VELOCITY*delta, -(X_UPPER_ARM+X_TORSO)/2, -(-X_UPPER_ARM+X_TORSO)/2);
+        leftArm.position.x = THREE.Math.clamp(leftArm.position.x - ARM_VELOCITY * delta, (-X_UPPER_ARM + X_TORSO) / 2, (X_UPPER_ARM + X_TORSO) / 2);
+        rightArm.position.x = THREE.Math.clamp(rightArm.position.x + ARM_VELOCITY * delta, -(X_UPPER_ARM + X_TORSO) / 2, -(-X_UPPER_ARM + X_TORSO) / 2);
     }
     if (moveArmsOut) {
-        leftArm.position.x = THREE.Math.clamp(leftArm.position.x+ARM_VELOCITY*delta, (-X_UPPER_ARM+X_TORSO)/2, (X_UPPER_ARM+X_TORSO)/2);
-        rightArm.position.x = THREE.Math.clamp(rightArm.position.x-ARM_VELOCITY*delta, -(X_UPPER_ARM+X_TORSO)/2, -(-X_UPPER_ARM+X_TORSO)/2);
+        leftArm.position.x = THREE.Math.clamp(leftArm.position.x + ARM_VELOCITY * delta, (-X_UPPER_ARM + X_TORSO) / 2, (X_UPPER_ARM + X_TORSO) / 2);
+        rightArm.position.x = THREE.Math.clamp(rightArm.position.x - ARM_VELOCITY * delta, -(X_UPPER_ARM + X_TORSO) / 2, -(-X_UPPER_ARM + X_TORSO) / 2);
     }
 
     // rotates the head in or out the robot 
@@ -674,6 +727,24 @@ function update() {
         head.translateY(-Y_HEAD_BASE / 2 - 0.05 * SIZE_SCALING);
         head.rotation.x = THREE.Math.clamp(head.rotation.x - HEAD_ROTATION_ANGLE * delta, 0, Math.PI);
         head.translateY(Y_HEAD_BASE / 2 + 0.05 * SIZE_SCALING);
+    }
+
+    // rotates the legs of the robot
+    if (rotateLegsBack) { 
+        leftLeg.translateY(Y_UPPER_LEG/2);
+        leftLeg.rotation.x = THREE.Math.clamp(leftLeg.rotation.x + LEGS_ROTATION_ANGLE*delta, 0, Math.PI/2);
+        leftLeg.translateY(-Y_UPPER_LEG/2);
+        rightLeg.translateY(Y_UPPER_LEG/2);
+        rightLeg.rotation.x = THREE.Math.clamp(rightLeg.rotation.x + LEGS_ROTATION_ANGLE*delta, 0, Math.PI/2);
+        rightLeg.translateY(-Y_UPPER_LEG/2);
+    }
+    if (rotateLegsForward) {
+        leftLeg.translateY(Y_UPPER_LEG/2);
+        leftLeg.rotation.x = THREE.Math.clamp(leftLeg.rotation.x - LEGS_ROTATION_ANGLE*delta, 0, Math.PI/2);
+        leftLeg.translateY(-Y_UPPER_LEG/2);
+        rightLeg.translateY(Y_UPPER_LEG/2);
+        rightLeg.rotation.x = THREE.Math.clamp(rightLeg.rotation.x - LEGS_ROTATION_ANGLE*delta, 0, Math.PI/2);
+        rightLeg.translateY(-Y_UPPER_LEG/2);
     }
 }
 
@@ -791,6 +862,14 @@ function onKeyDown(e) {
         case 102: //f
             rotateHeadOut = true;
             break;
+        case 87: //W
+        case 119: //w
+            rotateLegsBack = true;
+            break;
+        case 83: //S
+        case 115: //s
+            rotateLegsForward = true;
+            break;
     }
 
 }
@@ -832,6 +911,14 @@ function onKeyUp(e) {
         case 70: //F
         case 102: //f
             rotateHeadOut = false;
+            break;
+        case 87: //W
+        case 119: //w
+            rotateLegsBack = false;
+            break;
+        case 83: //S
+        case 115: //s
+            rotateLegsForward = false;
             break;
     }
 }
