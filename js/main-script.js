@@ -59,7 +59,7 @@ const SIZE_SCALING = 30;
 // Scaling sizes for the trailer components (the wheels are also used in the robot)
 const X_CONTAINER = 1.2 * SIZE_SCALING;
 const Y_CONTAINER = 1.2 * SIZE_SCALING;
-const Z_CONTAINER = 2.0 * SIZE_SCALING;
+const Z_CONTAINER = 3.0 * SIZE_SCALING;
 
 const X_WHEEL_JOINT = 0.4 * SIZE_SCALING;
 const Y_WHEEL_JOINT = 0.4 * SIZE_SCALING;
@@ -71,7 +71,7 @@ const H_WHEEL = 0.2 * SIZE_SCALING;
 const X_COUPLE = 0.2 * SIZE_SCALING;
 const Y_COUPLE = 0.2 * SIZE_SCALING;
 const Z_COUPLE = 0.2 * SIZE_SCALING;
-const Z_COUPLE_TRANSLATION = 0.6 * SIZE_SCALING;
+const Z_COUPLE_TRANSLATION = 1.0 * SIZE_SCALING;
 
 const TRAILER_VELOCITY_Z = 40;
 const TRAILER_VELOCITY_X = 40;
@@ -105,7 +105,7 @@ const Y_EYE_TRANSLATION = 0.05 * SIZE_SCALING;
 const R_ANTENA = 0.1 / 2 * SIZE_SCALING;
 const H_ANTENA = 0.1 * SIZE_SCALING;
 
-const HEAD_ROTATION_ANGLE = Math.PI;
+const HEAD_ROTATION_ANGLE = Math.PI*2;
 
 // arms of the robot, with the upper and lower arm 
 
@@ -672,7 +672,7 @@ function createScene() {
     scene.background = new THREE.Color(0xffeeff);
 
     createRobot(0, 0, 0);
-    //createTrailer(0, 0, 0);
+    createTrailer(0, 0, -(Z_TORSO+Z_CONTAINER+2*SIZE_SCALING));
 }
 
 //////////////////////
