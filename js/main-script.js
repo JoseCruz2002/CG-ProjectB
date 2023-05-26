@@ -9,8 +9,10 @@ var mesh, geometry;
 const materials = [];
 
 var clock;
+var delta;
 
 var trailer;
+var robot;
 var head;
 var leftArm;
 var rightArm;
@@ -29,6 +31,28 @@ var rotateHeadOut = false;
 var moveArmsIn = false, moveArmsOut = false;
 var rotateLegsBack = false, rotateLegsForward = false;
 var rotateFeetBack = false, rotateFeetForward = false;
+
+var collisionDetected = false, collisionAnimationHappening = false;
+
+// bounding box values for the colision checking
+
+// create bounding box for the robot
+var robot_xmax;
+var robot_ymax;
+var robot_zmax;
+var robot_xmin;
+var robot_ymin;
+var robot_zmin;
+
+// create bounding box for the trailer
+var trailer_xmax;
+var trailer_ymax;
+var trailer_zmax;
+var trailer_xmin;
+var trailer_ymin;
+var trailer_zmin;
+
+// --------------------------------------------------------------------------------
 
 // These constaants are used for indexing the materials of each part of the objects.
 const CONTAINER_INDEX = 0;
@@ -59,11 +83,11 @@ const SIZE_SCALING = 30;
 
 // Scaling sizes for the trailer components (the wheels are also used in the robot)
 const X_CONTAINER = 1.2 * SIZE_SCALING;
-const Y_CONTAINER = 1.2 * SIZE_SCALING;
+const Y_CONTAINER = 1.05 * SIZE_SCALING;
 const Z_CONTAINER = 3.0 * SIZE_SCALING;
 
 const X_WHEEL_JOINT = 0.4 * SIZE_SCALING;
-const Y_WHEEL_JOINT = 0.4 * SIZE_SCALING;
+const Y_WHEEL_JOINT = 0.31 * SIZE_SCALING;
 const Z_WHEEL_JOINT = 1.2 * SIZE_SCALING;
 
 const R_WHEEL = 0.2 * SIZE_SCALING;
@@ -74,8 +98,8 @@ const Y_COUPLE = 0.2 * SIZE_SCALING;
 const Z_COUPLE = 0.2 * SIZE_SCALING;
 const Z_COUPLE_TRANSLATION = 1.0 * SIZE_SCALING;
 
-const TRAILER_VELOCITY_Z = 40;
-const TRAILER_VELOCITY_X = 40;
+const TRAILER_VELOCITY_Z = 80;
+const TRAILER_VELOCITY_X = 80;
 
 
 // Scaling sizes for the robot components (the wheels are in the trailer components)
@@ -142,33 +166,6 @@ const Y_FEET = 0.3 * SIZE_SCALING;
 const Z_FEET = 0.4 * SIZE_SCALING;
 
 const FEET_ROTATION_ANGLE = Math.PI;
-
-/* arms of the robot, with the upper and lower arm 
-
-const X_UPPER_ARM = 0.25 * SIZE_SCALING;
-const Y_UPPER_ARM = 0.75 * SIZE_SCALING;
-const Z_UPPER_ARM = 0.2 * SIZE_SCALING;
-
-const X_FORE_ARM = 0.25 * SIZE_SCALING;
-const Y_FORE_ARM = 0.2 * SIZE_SCALING;
-const Z_FORE_ARM = 0.7 * SIZE_SCALING;
-
-const R_EXHAUST = 0.1 / 2 * SIZE_SCALING;
-const H_EXHAUST = 0.2 * SIZE_SCALING;
-
-const ARM_VELOCITY = 30;
-
-// legs of the robot
-
-const X_UPPER_LEG = 0.2 * SIZE_SCALING;
-const Y_UPPER_LEG = 0.5 * SIZE_SCALING;
-const Z_UPPER_LEG = 0.3 * SIZE_SCALING;
-
-const X_LOWER_LEG = 0.25 * SIZE_SCALING;
-const Y_LOWER_LEG = 1.2 * SIZE_SCALING;
-const Z_LOWER_LEG = 0.3 * SIZE_SCALING;
-
-const LEGS_ROTATION_ANGLE = Math.PI;*/
 
 //---------------------------------------------------------------------------------
 
@@ -253,27 +250,30 @@ function createTrailer(x, y, z) {
 
     materials[CONTAINER_INDEX] = new THREE.MeshBasicMaterial({ color: 0x807979, wireframe: true });
     materials[COUPLE_INDEX] = new THREE.MeshBasicMaterial({ color: 0x807900, wireframe: true });
-    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({ color: 0x800079, wireframe: true });
-    materials[WHEEL_JOINT_INDEX] = new THREE.MeshBasicMaterial({ color: 0x007979, wireframe: true });
+    materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({ color: 0x1c1c1c, wireframe: true });
+    materials[WHEEL_JOINT_INDEX] = new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: true });
 
     createContainer(trailer, 0, 0, 0);
     createWheelJoint(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT) / 2, -(Z_CONTAINER - Z_WHEEL_JOINT) / 2);
     createWheelJoint(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT) / 2, -(Z_CONTAINER - Z_WHEEL_JOINT) / 2);
-    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
-    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
-    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
-    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL * 2) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, (X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL) / 2, (Z_WHEEL_JOINT + R_WHEEL * 3 - Z_CONTAINER) / 2);
+    createWheel(trailer, -(X_CONTAINER - X_WHEEL_JOINT) / 2, -(Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL) / 2, (Z_WHEEL_JOINT - R_WHEEL * 3 - Z_CONTAINER) / 2);
     createCouplingDevice(trailer, 0, -(Y_CONTAINER + Y_COUPLE) / 2, Z_COUPLE_TRANSLATION);
 
-    scene.add(trailer);
-
     trailer.position.set(x, y, z);
+
+    // create bounding box for the trailer
+    updateTrailerBoundingBox();
+    
+    scene.add(trailer);
 }
 
 /**
  * Creates the Torso of the robot (base)
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -295,7 +295,7 @@ function createTorso(obj, x, y, z) {
 /**
  * Creates the Abdomen of the robot (base)
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -312,7 +312,7 @@ function createAbdomen(obj, x, y, z) {
 /**
  * Creates the Abdomen of the robot (base)
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -382,7 +382,7 @@ function createAntena(obj, x, y, z) {
  * The head can perform a rotation in orther to get into the body with 
  * the alpha angle over the XX axis.
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -462,7 +462,7 @@ function createExhaustPipe(obj, x, y, z) {
 /**
  * Creates the left arm of the robot
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x
  * @param {*} y
  * @param {*} z 
@@ -487,7 +487,7 @@ function createLeftArm(obj, x, y, z) {
 /**
  * Creates the right arm of the robot
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x
  * @param {*} y
  * @param {*} z 
@@ -588,7 +588,7 @@ function createRightFoot(obj, x, y, z) {
 /**
  * Creates the left leg of the robot, with the tighs, lower leg and it´s wheels.
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -616,7 +616,7 @@ function createLeftLeg(obj, x, y, z) {
 /**
  * Creates the right leg of the robot, with the tighs, lower leg and it´s wheels.
  * 
- * @param {*} obj parent object - baseForRobot
+ * @param {*} obj parent object - robot
  * @param {*} x 
  * @param {*} y 
  * @param {*} z 
@@ -649,53 +649,44 @@ function createRightLeg(obj, x, y, z) {
  * @param {*} y 
  * @param {*} z 
  */
-function createBaseForRobot(obj, x, y, z) {
+function createRobot(x, y, z) {
     'use strict'
 
-    var baseForRobot = new THREE.Object3D();
+    robot = new THREE.Object3D();
 
     materials[TORSO_INDEX] = new THREE.MeshBasicMaterial({ color: 0xb22222, wireframe: true });
     materials[ABDOMEN_INDEX] = new THREE.MeshBasicMaterial({ color: 0x778899, wireframe: true });
     materials[WAIST_INDEX] = new THREE.MeshBasicMaterial({ color: 0xb22222, wireframe: true });
     materials[WHEEL_INDEX] = new THREE.MeshBasicMaterial({ color: 0x1c1c1c, wireframe: true });
 
-    createTorso(baseForRobot, 0, 0, 0);
-    createAbdomen(baseForRobot, 0, -(Y_TORSO + Y_ABDOMEN) / 2, 0);
-    createWaist(baseForRobot, 0, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, 0);
-    createWheel/*on waist*/(baseForRobot, (X_WAIST + H_WHEEL) / 2, (-(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2)-R_WHEEL/3, R_WHEEL/3);
-    createWheel/*on waist*/(baseForRobot, -(X_WAIST + H_WHEEL) / 2, (-(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2)-R_WHEEL/3, R_WHEEL/3);
+    createTorso(robot, 0, 0, 0);
+    createAbdomen(robot, 0, -(Y_TORSO + Y_ABDOMEN) / 2, 0);
+    createWaist(robot, 0, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2, 0);
+    createWheel/*on waist*/(robot, (X_WAIST + H_WHEEL) / 2, (-(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2)-R_WHEEL/3, R_WHEEL/3);
+    createWheel/*on waist*/(robot, -(X_WAIST + H_WHEEL) / 2, (-(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2)-R_WHEEL/3, R_WHEEL/3);
 
-    createHead(baseForRobot, 0, Y_TORSO / 2, 0);
+    createHead(robot, 0, Y_TORSO / 2, -Z_HEAD_BASE/2.8);
 
-    createLeftArm(baseForRobot, (X_UPPER_ARM_ + X_TORSO) / 2, 0, 0);
-    createRightArm(baseForRobot, -(X_UPPER_ARM_ + X_TORSO) / 2, 0, 0);
+    createLeftArm(robot, (X_UPPER_ARM_ + X_TORSO) / 2, 0, 0);
+    createRightArm(robot, -(X_UPPER_ARM_ + X_TORSO) / 2, 0, 0);
 
-    //createLegs(baseForRobot, (X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
+    //createLegs(robot, (X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
 
-    createLeftLeg(baseForRobot, (X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
-    createRightLeg(baseForRobot, -(X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
+    createLeftLeg(robot, (X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
+    createRightLeg(robot, -(X_WAIST - X_UPPER_LEG_) / 2, -(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST * 2 + Y_UPPER_LEG_) / 2, Z_UPPER_LEG_ / 3);
 
-    obj.add(baseForRobot);
-}
+    robot.position.set(x, y, z);
 
-/**
- * Creates the robot object.
- * 
- * @param {*} x 
- * @param {*} y 
- * @param {*} z 
- */
-function createRobot(x, y, z) {
-    'use strict';
-
-    var robot = new THREE.Object3D();
-
-    createBaseForRobot(robot, 0, 0, 0);
+    // bounding box values
+    robot_xmax = robot.position.x + (X_TORSO)/2;
+    robot_ymax = robot.position.y + (Y_TORSO+H_EXHAUST_*3)/2;
+    robot_zmax = robot.position.z + (Z_TORSO)/2;
+    robot_xmin = robot.position.x - (X_TORSO)/2;
+    robot_ymin = robot.position.y - (-(Y_TORSO + Y_ABDOMEN * 2 + Y_WAIST) / 2)-R_WHEEL/3 - R_WHEEL;
+    robot_zmin = robot.position.z - (Z_UPPER_LEG_/1.5-R_WHEEL+Y_UPPER_LEG_*2+Y_LOWER_LEG_*2+Z_FEET*2)/2;
 
     scene.add(robot);
-    robot.position.set(x, y, z);
 }
-
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -753,19 +744,62 @@ function createCameras() {
 }
 
 
-//////////////////////
-/* CHECK COLLISIONS */
-//////////////////////
+/////////////////////
+/* COLLISION LOGIC */
+/////////////////////
+
+function isRobotInTruckMode() {
+    'use strict';
+
+    return head.rotation.x == Math.PI &&
+           leftArm.position.x == (-X_UPPER_ARM_ + X_TORSO) / 2 &&
+           leftLeg.rotation.x == Math.PI/2 &&
+           leftFoot.rotation.x == Math.PI/2;
+}
+
+/**
+ * Returns true if the trailer and the robot are colliding.
+ * This verificication is done using AABB´s.
+ */
 function checkCollisions() {
     'use strict';
 
+    collisionDetected = isRobotInTruckMode() &&
+                      robot_xmax > trailer_xmin && 
+                      robot_xmin < trailer_xmax &&
+                      robot_ymax > trailer_ymin && 
+                      robot_ymin < trailer_ymax &&
+                      robot_zmax > trailer_zmin && 
+                      robot_zmin < trailer_zmax;
+
 }
 
-///////////////////////
-/* HANDLE COLLISIONS */
-///////////////////////
+function updateTrailerBoundingBox() {
+    'use strict';
+
+    trailer_xmax = trailer.position.x + (X_CONTAINER)/2;
+    trailer_ymax = trailer.position.y + (Y_CONTAINER)/2;
+    trailer_zmax = trailer.position.z + (Z_CONTAINER)/2;
+    trailer_xmin = trailer.position.x - (X_CONTAINER)/2;
+    trailer_ymin = trailer.position.y - (Y_CONTAINER + Y_WHEEL_JOINT + R_WHEEL*2)/2;
+    trailer_zmin = trailer.position.z - (Z_CONTAINER)/2;
+}
+
 function handleCollisions() {
     'use strict';
+
+    // move the trailer to be aligned with the robot
+    var x_toMove = 0;
+    var z_toMove = -(Z_TORSO+Z_COUPLE_TRANSLATION*3.5)/2;
+
+    if (Math.abs(trailer.position.x - x_toMove) < 0.05*SIZE_SCALING && Math.abs(trailer.position.z - z_toMove) < 0.05*SIZE_SCALING) {
+        trailer.position.x = x_toMove;
+        trailer.position.z = z_toMove;
+        collisionAnimationHappening = false;
+        return;
+    }
+
+    trailer.translateOnAxis(new THREE.Vector3(-(trailer.position.x-x_toMove)/40, 0, -(trailer.position.z-z_toMove)/40).normalize(), TRAILER_VELOCITY_X * delta);
 
 }
 
@@ -775,7 +809,7 @@ function handleCollisions() {
 function update() {
     'use strict';
 
-    var delta = clock.getDelta();
+    delta = clock.getDelta();
 
     // changes the wireframe attribute of all the materials
     if (wireFramedChange && !wireFramedChanged) {
@@ -785,6 +819,18 @@ function update() {
             }
         }
         wireFramedChanged = true;
+    }
+    if (!wireFramedChange && wireFramedChanged) {
+        wireFramedChanged = false;
+    }
+    
+    checkCollisions();
+    if (!collisionDetected) {
+        collisionAnimationHappening = true;
+    }
+    else if (collisionAnimationHappening) {
+        handleCollisions();
+        return;
     }
 
     // moves the trailer
@@ -803,6 +849,7 @@ function update() {
     }
     if (z_motion != 0 || x_motion != 0) {
         trailer.translateOnAxis(new THREE.Vector3(x_motion, 0, z_motion).normalize(), TRAILER_VELOCITY_X * delta);
+        updateTrailerBoundingBox();
     }
 
     // moves the arms in and out the torso
@@ -847,21 +894,21 @@ function update() {
 
     // rotate the feet of the robot
     if (rotateFeetBack) {
-        leftFoot.translateZ(-Z_FEET);
+        leftFoot.translateZ(-Z_FEET+0.05*SIZE_SCALING);
         leftFoot.rotation.x = THREE.Math.clamp(leftFoot.rotation.x + FEET_ROTATION_ANGLE * delta, 0, Math.PI / 2);
-        leftFoot.translateZ(Z_FEET);
-        rightFoot.translateZ(-Z_FEET);
+        leftFoot.translateZ(Z_FEET-0.05*SIZE_SCALING);
+        rightFoot.translateZ(-Z_FEET+0.05*SIZE_SCALING);
         rightFoot.rotation.x = THREE.Math.clamp(rightFoot.rotation.x + FEET_ROTATION_ANGLE * delta, 0, Math.PI / 2);
-        rightFoot.translateZ(Z_FEET);
+        rightFoot.translateZ(Z_FEET-0.05*SIZE_SCALING);
     }
 
     if (rotateFeetForward) {
-        leftFoot.translateZ(-Z_FEET);
+        leftFoot.translateZ(-Z_FEET+0.05*SIZE_SCALING);
         leftFoot.rotation.x = THREE.Math.clamp(leftFoot.rotation.x - FEET_ROTATION_ANGLE * delta, 0, Math.PI / 2);
-        leftFoot.translateZ(Z_FEET);
-        rightFoot.translateZ(-Z_FEET);
+        leftFoot.translateZ(Z_FEET-0.05*SIZE_SCALING);
+        rightFoot.translateZ(-Z_FEET+0.05*SIZE_SCALING);
         rightFoot.rotation.x = THREE.Math.clamp(rightFoot.rotation.x - FEET_ROTATION_ANGLE * delta, 0, Math.PI / 2);
-        rightFoot.translateZ(Z_FEET);
+        rightFoot.translateZ(Z_FEET-0.05*SIZE_SCALING);
     }
 }
 
@@ -949,7 +996,6 @@ function onKeyDown(e) {
             break;
         case 54: //6
             wireFramedChange = true;
-            wireFramedChanged = false;
             break;
         case 38: // arrow-up
             moveTrailerForward = true;
