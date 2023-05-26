@@ -35,8 +35,6 @@ var rotateFeetBack = false, rotateFeetForward = false;
 var collisionDetected = false, collisionAnimationHappening = false;
 
 // bounding box values for the colision checking
-
-// create bounding box for the robot
 var robot_xmax;
 var robot_ymax;
 var robot_zmax;
@@ -44,7 +42,6 @@ var robot_xmin;
 var robot_ymin;
 var robot_zmin;
 
-// create bounding box for the trailer
 var trailer_xmax;
 var trailer_ymax;
 var trailer_zmax;
@@ -799,7 +796,7 @@ function handleCollisions() {
         return;
     }
 
-    trailer.translateOnAxis(new THREE.Vector3(-(trailer.position.x-x_toMove)/40, 0, -(trailer.position.z-z_toMove)/40).normalize(), TRAILER_VELOCITY_X * delta);
+    trailer.translateOnAxis(new THREE.Vector3(-(trailer.position.x-x_toMove)/25, 0, -(trailer.position.z-z_toMove)/25).normalize(), TRAILER_VELOCITY_X * delta);
 
 }
 
